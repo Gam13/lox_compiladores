@@ -1,5 +1,8 @@
 package lox_compiladores;
 
-public class LoxCallable {
+import java.util.List;
 
+interface LoxCallable {
+	int ParamNumbs();
+	Object call(LoxInterpreter interpreter, List<Object> arguments);
 }
