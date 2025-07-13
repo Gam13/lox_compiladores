@@ -51,7 +51,7 @@ public class Scanner {
         return current >= source.length();
     }
 
-    private void scanToken() {
+    public void scanToken() {
         char c = advance();
         switch (c) {
             case '(': addToken(TokenType.LEFT_PAREN); break;
