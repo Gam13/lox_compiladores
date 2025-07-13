@@ -4,7 +4,8 @@ import java.util.List;
 
 public abstract class Expr {
 
-    public interface ExpressionEvaluator<T> {
+
+	public interface ExpressionEvaluator<T> {
         T evaluateAssignment(Assign expr);
         T evaluateBinary(BinaryOp expr);
         T evaluateCall(CallExpr expr);
