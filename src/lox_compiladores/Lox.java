@@ -55,5 +55,9 @@ public class Lox {
 		
 		interpreter.interpret(statements);
 	}
+    public static void RuntimeError(RuntimeError error) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'RuntimeError'");
+    }
 
 }
