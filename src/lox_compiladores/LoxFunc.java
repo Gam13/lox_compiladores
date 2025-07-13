@@ -16,4 +16,9 @@ public class LoxFunc implements LoxCallable {
 		return null;
 	}
 
+	public LoxClasses bind(LoxInstance instance) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }
