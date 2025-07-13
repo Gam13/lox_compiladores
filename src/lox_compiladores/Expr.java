@@ -3,7 +3,7 @@ package lox_compiladores;
 import java.util.List;
 
 public abstract class Expr {
-    // Interface do visitor com nomes diferentes
+
     public interface ExpressionEvaluator<T> {
         T evaluateAssignment(Assign expr);
         T evaluateBinary(BinaryOp expr);
@@ -158,6 +158,21 @@ public abstract class Expr {
         }
         @Override public <T> T accept(ExpressionEvaluator<T> evaluator) {
             return evaluator.evaluateSuper(this);
+        }
+    }
+
+    public static class Variable extends Expr {
+        public final Token name;
+        
+        public Variable(Token name) {
+            this.name = name;
+        }
+        
+        @Override
+        public <T> T accept(ExpressionEvaluator<T> evaluator) {
+            // Como esta é uma classe especial para uso em herança,
+            // podemos tratá-la como uma VarRef normal
+            return evaluator.evaluateVariable(new VarRef(name));
         }
     }
 }
