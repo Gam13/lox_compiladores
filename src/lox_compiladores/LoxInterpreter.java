@@ -23,7 +23,7 @@ public class LoxInterpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> 
                 execute(statement);
             }
         } catch (RuntimeError error) {
-            Lox.RuntimeError(error);
+            Lox.runtimeError(error);
         }
     }
 

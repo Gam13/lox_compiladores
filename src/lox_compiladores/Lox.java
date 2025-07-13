@@ -9,55 +9,87 @@ import java.nio.file.Paths;
 import java.util.List;
 
 public class Lox {
-	private static final LoxInterpreter interpreter = new LoxInterpreter();
+    private static final LoxInterpreter interpreter = new LoxInterpreter();
+    
+    static boolean hadError = false;
+    static boolean hadRuntimeError = false;
 
-	public static void main(String[] args) throws IOException {
-		if (args.length > 1) {
-		      System.out.println("Usage: jlox [script]");
-		      System.exit(64); // [64]
-		    } else if (args.length == 1) {
-		      runFile(args[0]);
-		    } else {
-		      runPrompt();
-		    }
-	}
-	private static void runFile(String path) throws IOException {
-	//Execução direta do arquivo
-		byte[] bytes = Files.readAllBytes(Paths.get(path));
-		run(new String(bytes, Charset.defaultCharset()));
-	}
-	
-	private static void runPrompt() throws IOException { 
-	//Metodo ensinado pelo professor de READ-EVAL-PRINT-LOOP
-		InputStreamReader input = new InputStreamReader(System.in);
-		BufferedReader reader = new BufferedReader(input);
-		
-		for (;;) {
-			System.out.print("> ");
-			String line = reader.readLine();
-			if(line == null) break;
-			run(line);
-		}
-	}
-	
-	private static void run(String source) {
-		//Aqui é onde é feito a anaálise léxica
-		Scanner scanner = new Scanner(source);
-		List<Token> tokens = scanner.scanToken();
-		
-		//Aqui é onde é feito a análise sintática
-		Parser parser = new Parser(tokens);
-		List<Stmt> statements = parser.parse();
-		
-		//Resolução de variáveis
-		Resolver resolver = new Resolver(interpreter);
-		resolver.resolve(statements);
-		
-		interpreter.interpret(statements);
-	}
-    public static void RuntimeError(RuntimeError error) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'RuntimeError'");
+    public static void main(String[] args) throws IOException {
+        if (args.length > 1) {
+            System.out.println("Usage: jlox [script]");
+            System.exit(64);
+        } else if (args.length == 1) {
+            runFile(args[0]);
+        } else {
+            runPrompt();
+        }
     }
+    
+    private static void runFile(String path) throws IOException {
+        byte[] bytes = Files.readAllBytes(Paths.get(path));
+        run(new String(bytes, Charset.defaultCharset()));
+        
+        if (hadError) System.exit(65);       
+        if (hadRuntimeError) System.exit(70);  
+    }
+    
+    private static void runPrompt() throws IOException {
+        InputStreamReader input = new InputStreamReader(System.in);
+        BufferedReader reader = new BufferedReader(input);
+        
+        for (;;) {
+            System.out.print("> ");
+            String line = reader.readLine();
+            if (line == null) break;
+            
+            run(line);
+            
+            hadError = false;
+            hadRuntimeError = false;
+        }
+    }
+    
+    private static void run(String source) {
+        // Análise léxica
+        Scanner scanner = new Scanner(source);
+        List<Token> tokens = scanner.scanToken();
+        
+        if (hadError) return;
+        
+        // Análise sintática
+        Parser parser = new Parser(tokens);
+        List<Stmt> statements = parser.parse();
+        
 
+        if (hadError) return;
+        
+        // Resolução de variáveis
+        Resolver resolver = new Resolver(interpreter);
+        resolver.resolve(statements);
+        
+        if (hadError) return;
+        
+        interpreter.interpret(statements);
+    }
+    
+
+    //Reportes de erros do Lox
+    public static void error(int line, String message) {
+        report(line, "", message);
+    }
+    public static void error(Token token, String message) {
+        if (token.type == TokenType.EOF) {
+            report(token.line, " at end", message);
+        } else {
+            report(token.line, " at '" + token.lexeme + "'", message);
+        }
+    }
+    public static void runtimeError(RuntimeError error) {
+        System.err.println(error.getMessage() + "\n[line " + error.token.line + "]");
+        hadRuntimeError = true;
+    }
+    private static void report(int line, String where, String message) {
+        System.err.println("[line " + line + "] Error" + where + ": " + message);
+        hadError = true;
+    }
 }
