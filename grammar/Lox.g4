@@ -4,178 +4,69 @@ grammar Lox;
 package lox_compiladores;
 }
 
-// Regras do Parser (Syntax Grammar do livro)
-program
-    : declaration* EOF
-    ;
+// Regras do Parser (Syntax Grammar)
+program        : declaration* EOF ;
 
-declaration
-    : classDecl
-    | funDecl
-    | varDecl
-    | statement
-    ;
+declaration    : varDecl
+               | statement
+               ;
 
-classDecl
-    : 'class' IDENTIFIER ('<' IDENTIFIER)? '{' function* '}'
-    ;
+varDecl        : 'var' IDENTIFIER ('=' expression)? ';' ;
 
-funDecl
-    : 'fun' function
-    ;
+statement      : exprStmt
+               | printStmt
+               ;
 
-varDecl
-    : 'var' IDENTIFIER ('=' expression)? ';'
-    ;
+exprStmt       : expression ';' ;
+printStmt      : 'print' expression ';' ;
 
-statement
-    : exprStmt
-    | forStmt
-    | ifStmt
-    | printStmt
-    | returnStmt
-    | whileStmt
-    | block
-    ;
+expression     : assignment ;
+assignment     : IDENTIFIER '=' assignment | equality ;
+equality       : comparison ( ('!=' | '==') comparison )* ;
+comparison     : term ( ('>' | '>=' | '<' | '<=' ) term )* ;
+term           : factor ( ('-' | '+') factor )* ;
+factor         : unary ( ('/' | '*') unary )* ;
+unary          : ('!' | '-') unary | primary ;
+primary        : NUMBER
+               | STRING
+               | 'true'
+               | 'false'
+               | 'nil'
+               | IDENTIFIER
+               | '(' expression ')'
+               ;
 
-exprStmt
-    : expression ';'
-    ;
-
-forStmt
-    : 'for' '(' ( varDecl | exprStmt | ';' ) expression? ';' expression? ')' statement
-    ;
-
-ifStmt
-    : 'if' '(' expression ')' statement ('else' statement)?
-    ;
-
-printStmt
-    : 'print' expression ';'
-    ;
-
-returnStmt
-    : 'return' expression? ';'
-    ;
-
-whileStmt
-    : 'while' '(' expression ')' statement
-    ;
-
-block
-    : '{' declaration* '}'
-    ;
-
-expression
-    : assignment
-    ;
-
-assignment
-    : ( call '.' )? IDENTIFIER '=' assignment
-    | logic_or
-    ;
-
-logic_or
-    : logic_and ( 'or' logic_and )*
-    ;
-
-logic_and
-    : equality ( 'and' equality )*
-    ;
-
-equality
-    : comparison ( ( '!=' | '==' ) comparison )*
-    ;
-
-comparison
-    : term ( ( '>' | '>=' | '<' | '<=' ) term )*
-    ;
-
-term
-    : factor ( ( '-' | '+' ) factor )*
-    ;
-
-factor
-    : unary ( ( '/' | '*' ) unary )*
-    ;
-
-unary
-    : ( '!' | '-' ) unary
-    | call
-    ;
-
-call
-    : primary ( '(' arguments? ')' | '.' IDENTIFIER )*
-    ;
-
-primary
-    : 'true'
-    | 'false'
-    | 'nil'
-    | 'this'
-    | NUMBER
-    | STRING
-    | IDENTIFIER
-    | '(' expression ')'
-    | 'super' '.' IDENTIFIER
-    ;
-
-function
-    : IDENTIFIER '(' parameters? ')' block
-    ;
-
-parameters
-    : IDENTIFIER ( ',' IDENTIFIER )*
-    ;
-
-arguments
-    : expression ( ',' expression )*
-    ;
-
-// Regras do Lexer (Lexical Grammar do livro)
+// Regras do Lexer (Lexical Grammar)
 IDENTIFIER : [a-zA-Z_] [a-zA-Z0-9_]* ;
-NUMBER : [0-9]+ ( '.' [0-9]+ )? ;
-STRING : '"' .*? '"' ;
+NUMBER     : [0-9]+ ('.' [0-9]+)? ;
+STRING     : '"' .*? '"' ;
 
 // Palavras-chave
-CLASS : 'class' ;
-FUN : 'fun' ;
-VAR : 'var' ;
-FOR : 'for' ;
-IF : 'if' ;
-ELSE : 'else' ;
-PRINT : 'print' ;
-RETURN : 'return' ;
-WHILE : 'while' ;
-TRUE : 'true' ;
-FALSE : 'false' ;
-NIL : 'nil' ;
-THIS : 'this' ;
-SUPER : 'super' ;
-OR : 'or' ;
-AND : 'and' ;
+VAR    : 'var' ;
+PRINT  : 'print' ;
+TRUE   : 'true' ;
+FALSE  : 'false' ;
+NIL    : 'nil' ;
 
-// Operadores e símbolos
+// Operadores
+EQUAL  : '=' ;
+EQUAL_EQUAL : '==' ;
+BANG_EQUAL : '!=' ;
+GREATER : '>' ;
+GREATER_EQUAL : '>=' ;
+LESS : '<' ;
+LESS_EQUAL : '<=' ;
 PLUS : '+' ;
 MINUS : '-' ;
 STAR : '*' ;
 SLASH : '/' ;
 BANG : '!' ;
-BANG_EQUAL : '!=' ;
-EQUAL : '=' ;
-EQUAL_EQUAL : '==' ;
-GREATER : '>' ;
-GREATER_EQUAL : '>=' ;
-LESS : '<' ;
-LESS_EQUAL : '<=' ;
-DOT : '.' ;
-COMMA : ',' ;
+
+// Delimitadores
 SEMICOLON : ';' ;
 LEFT_PAREN : '(' ;
 RIGHT_PAREN : ')' ;
-LEFT_BRACE : '{' ;
-RIGHT_BRACE : '}' ;
 
 // Ignorar
-WS : [ \t\r\n]+ -> skip ;
+WS      : [ \t\r\n]+ -> skip ;
 COMMENT : '//' ~[\r\n]* -> skip ;
