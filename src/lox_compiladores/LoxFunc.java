@@ -2,8 +2,6 @@ package lox_compiladores;
 
 import java.util.List;
 
-import lox_compiladores.Stmt.Return;
-
 public class LoxFunc implements LoxCallable {
 	
 	private final Stmt.Function declaration;

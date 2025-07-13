@@ -68,4 +68,9 @@ public class Environment {
         }
         return environment;
     }
+
+	public void define(String string, LoxInstance instance) {
+		// TODO Auto-generated method stub
+		
+	}
 }
