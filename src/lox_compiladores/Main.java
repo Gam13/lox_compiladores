@@ -14,4 +14,4 @@ public class Main {
 }
 
 
-// Nota, esse arquivo é LIXO, eu o fiz pois precisava testar se os pedaços que eu fiz estavam minimamente corretos, favor não os levar a sério. Davi Nobre
+// Nota, esse arquivo é LIXO, eu o fiz pois precisava testar se os pedaços que eu fiz estavam minimamente corretos, favor não os levar a sério. Davi Nobrevoid
