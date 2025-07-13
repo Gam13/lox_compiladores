@@ -18,8 +18,8 @@ public class Environment {
     }
 
     // Define uma variável no ambiente atual
-    public void define(String name, Object value) {
-        values.put(name, value);
+    public void define(Token token, Object value) {
+        values.put(token, value);
     }
 
     // Obtém o valor de uma variável, procurando nos ambientes aninhados

@@ -2,6 +2,8 @@ package lox_compiladores;
 
 import java.util.List;
 
+import lox_compiladores.Stmt.Return;
+
 public class LoxFunc implements LoxCallable {
 	
 	private final Stmt.Function declaration;
@@ -21,7 +23,18 @@ public class LoxFunc implements LoxCallable {
 
 	@Override
 	public Object call(LoxInterpreter interpreter, List<Object> arguments) {
-		// TODO Auto-generated method stub
+		Environment environment = new Environment(closure);
+		for (int i = 0 ;i < declaration.params.size();i++) {
+			environment.define(declaration.params.get(i), arguments.get(i));
+			
+			try {
+				interpreter.executeBlock(declaration.body, environment);
+			}catch(Return returnValue) {
+				if (isInitializer) return closure.getAt(0, "this");
+				return returnValue.value;
+			}
+		}
+		if(isInitializer) return closure.getAt(0, "this");
 		return null;
 	}
 
