@@ -103,10 +103,10 @@ public class LoxInterpreter implements Expr.ExpressionEvaluator<Object>, Stmt.Vi
 	}
 
 	@Override
-	public Void visitExpressionStmt(Expression stmt) {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    public Void visitExpressionStmt(Stmt.Expression stmt) {
+        evaluate(stmt.expression);
+        return null;
+    }
 
 	@Override
 	public Void visitFunctionStmt(Function stmt) {
