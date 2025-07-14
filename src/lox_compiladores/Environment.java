@@ -73,4 +73,9 @@ public class Environment {
 		// TODO Auto-generated method stub
 		
 	}
+
+	public void define(String string, LoxCallable loxCallable) {
+		// TODO Auto-generated method stub
+		
+	}
 }
