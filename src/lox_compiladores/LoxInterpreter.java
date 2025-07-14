@@ -33,7 +33,22 @@ public class LoxInterpreter implements Expr.ExpressionEvaluator<Object>, Stmt.Vi
     private final Map<Expr, Integer> locals = new HashMap<>();	
 
     LoxInterpreter() {
-		
+        globals.define("clock", new LoxCallable() {
+            @Override
+            public int ParamNumbs() {
+                return 0;
+            }
+
+            @Override
+            public Object call(LoxInterpreter interpreter, List<Object> arguments) {
+                return (double)System.currentTimeMillis() / 1000.0;
+            }
+
+            @Override
+            public String toString() {
+                return "<native fn>";
+            }
+        });
     }
 
     void interpret(List<Stmt> statements) {
@@ -83,7 +98,7 @@ public class LoxInterpreter implements Expr.ExpressionEvaluator<Object>, Stmt.Vi
 
 	@Override
 	public Void visitBlockStmt(Block stmt) {
-		// TODO Auto-generated method stub
+		executeBlock(stmt.statements, new Environment(environment));
 		return null;
 	}
 
