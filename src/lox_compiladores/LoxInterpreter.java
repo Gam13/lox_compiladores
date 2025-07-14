@@ -107,13 +107,19 @@ public class LoxInterpreter implements Expr.ExpressionEvaluator<Object>, Stmt.Vi
         evaluate(stmt.expression);
         return null;
     }
-
+	
 	@Override
 	public Void visitFunctionStmt(Stmt.Function stmt) {
         LoxFunc function = new LoxFunc(stmt, environment, false);
         environment.define(stmt.name.lexeme, function);
         return null;
     }
+	
+	private boolean isTruthy(Object object) {
+	    if (object == null) return false;
+	    if (object instanceof Boolean) return (boolean)object;
+	    return true;
+	}
 
 	@Override
 	public Void visitIfStmt(If stmt) {
