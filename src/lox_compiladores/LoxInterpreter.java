@@ -95,7 +95,25 @@ public class LoxInterpreter implements Expr.ExpressionEvaluator<Object>, Stmt.Vi
             return globals.get(name);
         }
     }
-
+    
+    private boolean isTruthy(Object object) {
+	    if (object == null) return false;
+	    if (object instanceof Boolean) return (boolean)object;
+	    return true;
+	}
+    
+    private String stringify(Object object) {
+        if (object == null) return "nil";
+        if (object instanceof Double) {
+            String text = object.toString();
+            if (text.endsWith(".0")) {
+                text = text.substring(0, text.length() - 2);
+            }
+            return text;
+        }
+        return object.toString();
+    }
+    
 	@Override
 	public Void visitBlockStmt(Block stmt) {
 		executeBlock(stmt.statements, new Environment(environment));
@@ -114,23 +132,22 @@ public class LoxInterpreter implements Expr.ExpressionEvaluator<Object>, Stmt.Vi
         environment.define(stmt.name.lexeme, function);
         return null;
     }
-	
-	private boolean isTruthy(Object object) {
-	    if (object == null) return false;
-	    if (object instanceof Boolean) return (boolean)object;
-	    return true;
-	}
 
 	@Override
-	public Void visitIfStmt(If stmt) {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    public Void visitIfStmt(Stmt.If stmt) {
+        if (isTruthy(evaluate(stmt.condition))) {
+            execute(stmt.thenBranch);
+        } else if (stmt.elseBranch != null) {
+            execute(stmt.elseBranch);
+        }
+        return null;
+    }
 
 	@Override
 	public Void visitPrintStmt(Print stmt) {
-		// TODO Auto-generated method stub
-		return null;
+		Object value = evaluate(stmt.expression);
+        System.out.println(stringify(value));
+        return null;
 	}
 
 	@Override
