@@ -5,7 +5,7 @@ import java.util.Map;
 
 public class Environment {
     private final Map<String, Object> values = new HashMap<>();
-    private final Environment enclosing;
+    final Environment enclosing;
 
     // Construtor para ambiente global (sem enclosing)
     public Environment() {
@@ -75,6 +75,11 @@ public class Environment {
 	}
 
 	public void define(String string, LoxCallable loxCallable) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void define(String string, Object superclass) {
 		// TODO Auto-generated method stub
 		
 	}

@@ -1,11 +1,10 @@
 package lox_compiladores;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-import lox_compiladores.Expr.Assign;
 import lox_compiladores.Expr.BinaryOp;
 import lox_compiladores.Expr.CallExpr;
 import lox_compiladores.Expr.GetProp;
@@ -16,21 +15,11 @@ import lox_compiladores.Expr.ThisRef;
 import lox_compiladores.Expr.UnaryOp;
 import lox_compiladores.Expr.Value;
 import lox_compiladores.Expr.VarRef;
-import lox_compiladores.Stmt.Block;
-import lox_compiladores.Stmt.Class;
-import lox_compiladores.Stmt.Expression;
-import lox_compiladores.Stmt.Function;
-import lox_compiladores.Stmt.If;
-import lox_compiladores.Stmt.Print;
-import lox_compiladores.Stmt.Return;
-import lox_compiladores.Stmt.Var;
-import lox_compiladores.Stmt.While;
 
 public class LoxInterpreter implements Expr.ExpressionEvaluator<Object>, Stmt.Visitor<Void> {
-    
-    private final Environment globals = new Environment();
+    final Environment globals = new Environment();
     private Environment environment = globals;
-    private final Map<Expr, Integer> locals = new HashMap<>();	
+    private final Map<Expr, Integer> locals = new HashMap<>();
 
     LoxInterpreter() {
         globals.define("clock", new LoxCallable() {
@@ -61,7 +50,6 @@ public class LoxInterpreter implements Expr.ExpressionEvaluator<Object>, Stmt.Vi
         }
     }
 
-    // --- Métodos auxiliares básicos ---
     private Object evaluate(Expr expr) {
         return expr.accept(this);
     }
@@ -70,10 +58,14 @@ public class LoxInterpreter implements Expr.ExpressionEvaluator<Object>, Stmt.Vi
         stmt.accept(this);
     }
 
-    void executeBlock(List<Stmt> statements, Environment newEnvironment) {
+    void resolve(Expr expr, int depth) {
+        locals.put(expr, depth);
+    }
+
+    void executeBlock(List<Stmt> statements, Environment environment) {
         Environment previous = this.environment;
         try {
-            this.environment = newEnvironment;
+            this.environment = environment;
             for (Stmt statement : statements) {
                 execute(statement);
             }
@@ -82,9 +74,238 @@ public class LoxInterpreter implements Expr.ExpressionEvaluator<Object>, Stmt.Vi
         }
     }
 
-    // --- Resolução de variáveis ---
-    void resolve(Expr expr, int depth) {
-        locals.put(expr, depth);
+    @Override
+    public Void visitBlockStmt(Stmt.Block stmt) {
+        executeBlock(stmt.statements, new Environment(environment));
+        return null;
+    }
+
+    @Override
+    public Void visitClassStmt(Stmt.Class stmt) {
+        Object superclass = null;
+        if (stmt.superclass != null) {
+            superclass = evaluate(stmt.superclass);
+            if (!(superclass instanceof LoxClasses)) {
+                throw new RuntimeError(stmt.superclass.name, "Superclass must be a class.");
+            }
+        }
+
+        environment.define(stmt.name.lexeme, null);
+
+        if (stmt.superclass != null) {
+            environment = new Environment(environment);
+            environment.define("super", superclass);
+        }
+
+        Map<String, LoxFunc> methods = new HashMap<>();
+        for (Stmt.Function method : stmt.methods) {
+            LoxFunc function = new LoxFunc(method, environment, method.name.lexeme.equals("init"));
+            methods.put(method.name.lexeme, function);
+        }
+
+        LoxClasses klass = new LoxClasses(stmt.name.lexeme, (LoxClasses)superclass, methods);
+
+        if (superclass != null) {
+            environment = environment.enclosing;
+        }
+
+        environment.assign(stmt.name, klass);
+        return null;
+    }
+
+    @Override
+    public Void visitExpressionStmt(Stmt.Expression stmt) {
+        evaluate(stmt.expression);
+        return null;
+    }
+
+    @Override
+    public Void visitFunctionStmt(Stmt.Function stmt) {
+        LoxFunc function = new LoxFunc(stmt, environment, false);
+        environment.define(stmt.name.lexeme, function);
+        return null;
+    }
+
+    @Override
+    public Void visitIfStmt(Stmt.If stmt) {
+        if (isTruthy(evaluate(stmt.condition))) {
+            execute(stmt.thenBranch);
+        } else if (stmt.elseBranch != null) {
+            execute(stmt.elseBranch);
+        }
+        return null;
+    }
+
+    @Override
+    public Void visitPrintStmt(Stmt.Print stmt) {
+        Object value = evaluate(stmt.expression);
+        System.out.println(stringify(value));
+        return null;
+    }
+
+    @Override
+    public Void visitReturnStmt(Stmt.Return stmt) {
+        Object value = null;
+        if (stmt.value != null) value = evaluate(stmt.value);
+        throw new Return(value);
+    }
+
+    @Override
+    public Void visitVarStmt(Stmt.Var stmt) {
+        Object value = null;
+        if (stmt.initializer != null) {
+            value = evaluate(stmt.initializer);
+        }
+        environment.define(stmt.name.lexeme, value);
+        return null;
+    }
+
+    @Override
+    public Void visitWhileStmt(Stmt.While stmt) {
+        while (isTruthy(evaluate(stmt.condition))) {
+            execute(stmt.body);
+        }
+        return null;
+    }
+
+    @Override
+    public Object evaluateAssignment(Expr.Assign expr) {
+        Object value = evaluate(expr.value);
+        Integer distance = locals.get(expr);
+        if (distance != null) {
+            environment.assignAt(distance, expr.target, value);
+        } else {
+            globals.assign(expr.target, value);
+        }
+        return value;
+    }
+
+    @Override
+    public Object evaluateBinary(BinaryOp expr) {
+        Object left = evaluate(expr.left);
+        Object right = evaluate(expr.right);
+
+        switch (expr.operator.type) {
+            case BANG_EQUAL: return !isEqual(left, right);
+            case EQUAL_EQUAL: return isEqual(left, right);
+            case GREATER:
+                checkNumberOperands(expr.operator, left, right);
+                return (double)left > (double)right;
+            case GREATER_EQUAL:
+                checkNumberOperands(expr.operator, left, right);
+                return (double)left >= (double)right;
+            case LESS:
+                checkNumberOperands(expr.operator, left, right);
+                return (double)left < (double)right;
+            case LESS_EQUAL:
+                checkNumberOperands(expr.operator, left, right);
+                return (double)left <= (double)right;
+            case MINUS:
+                checkNumberOperands(expr.operator, left, right);
+                return (double)left - (double)right;
+            case PLUS:
+                if (left instanceof Double && right instanceof Double) {
+                    return (double)left + (double)right;
+                }
+                if (left instanceof String && right instanceof String) {
+                    return (String)left + (String)right;
+                }
+                throw new RuntimeError(expr.operator, "Operands must be two numbers or two strings.");
+            case SLASH:
+                checkNumberOperands(expr.operator, left, right);
+                return (double)left / (double)right;
+            case STAR:
+                checkNumberOperands(expr.operator, left, right);
+                return (double)left * (double)right;
+		default:
+			break;
+        }
+        return null;
+    }
+
+    @Override
+    public Object evaluateCall(CallExpr expr) {
+        Object callee = evaluate(expr.callee);
+        List<Object> arguments = new ArrayList<>();
+        for (Expr argument : expr.arguments) {
+            arguments.add(evaluate(argument));
+        }
+
+        if (!(callee instanceof LoxCallable)) {
+            throw new RuntimeError(expr.paren, "Can only call functions and classes.");
+        }
+
+        LoxCallable function = (LoxCallable)callee;
+        if (arguments.size() != function.ParamNumbs()) {
+            throw new RuntimeError(expr.paren, "Expected " + function.ParamNumbs() + " arguments but got " + arguments.size() + ".");
+        }
+
+        return function.call(this, arguments);
+    }
+
+    @Override
+    public Object evaluateGet(GetProp expr) {
+        Object object = evaluate(expr.object);
+        if (object instanceof LoxInstance) {
+            return ((LoxInstance) object).get(expr.property);
+        }
+        throw new RuntimeError(expr.property, "Only instances have properties.");
+    }
+
+    @Override
+    public Object evaluateLiteral(Value expr) {
+        return expr.value;
+    }
+
+    @Override
+    public Object evaluateGrouping(Group expr) {
+        return evaluate(expr.expression);
+    }
+
+    @Override
+    public Object evaluateLogical(LogicalOp expr) {
+        Object left = evaluate(expr.left);
+        if (expr.operator.type == TokenType.OR) {
+            if (isTruthy(left)) return left;
+        } else {
+            if (!isTruthy(left)) return left;
+        }
+        return evaluate(expr.right);
+    }
+
+    @Override
+    public Object evaluateUnary(UnaryOp expr) {
+        Object right = evaluate(expr.right);
+        switch (expr.operator.type) {
+            case BANG:
+                return !isTruthy(right);
+            case MINUS:
+                checkNumberOperand(expr.operator, right);
+                return -(double)right;
+        }
+        return null;
+    }
+
+    @Override
+    public Object evaluateVariable(VarRef expr) {
+        return lookUpVariable(expr.name, expr);
+    }
+
+    @Override
+    public Object evaluateThis(ThisRef expr) {
+        return lookUpVariable(expr.keyword, expr);
+    }
+
+    @Override
+    public Object evaluateSuper(SuperCall expr) {
+        int distance = locals.get(expr);
+        LoxClasses superclass = (LoxClasses)environment.getAt(distance, "super");
+        LoxInstance object = (LoxInstance)environment.getAt(distance - 1, "this");
+        LoxFunc method = superclass.findMethod(expr.method.lexeme);
+        if (method == null) {
+            throw new RuntimeError(expr.method, "Undefined property '" + expr.method.lexeme + "'.");
+        }
+        return method.bind(object);
     }
 
     private Object lookUpVariable(Token name, Expr expr) {
@@ -95,13 +316,29 @@ public class LoxInterpreter implements Expr.ExpressionEvaluator<Object>, Stmt.Vi
             return globals.get(name);
         }
     }
-    
+
+    private void checkNumberOperand(Token operator, Object operand) {
+        if (operand instanceof Double) return;
+        throw new RuntimeError(operator, "Operand must be a number.");
+    }
+
+    private void checkNumberOperands(Token operator, Object left, Object right) {
+        if (left instanceof Double && right instanceof Double) return;
+        throw new RuntimeError(operator, "Operands must be numbers.");
+    }
+
     private boolean isTruthy(Object object) {
-	    if (object == null) return false;
-	    if (object instanceof Boolean) return (boolean)object;
-	    return true;
-	}
-    
+        if (object == null) return false;
+        if (object instanceof Boolean) return (boolean)object;
+        return true;
+    }
+
+    private boolean isEqual(Object a, Object b) {
+        if (a == null && b == null) return true;
+        if (a == null) return false;
+        return a.equals(b);
+    }
+
     private String stringify(Object object) {
         if (object == null) return "nil";
         if (object instanceof Double) {
@@ -113,131 +350,4 @@ public class LoxInterpreter implements Expr.ExpressionEvaluator<Object>, Stmt.Vi
         }
         return object.toString();
     }
-    
-	@Override
-	public Void visitBlockStmt(Block stmt) {
-		executeBlock(stmt.statements, new Environment(environment));
-		return null;
-	}
-
-	@Override
-    public Void visitExpressionStmt(Stmt.Expression stmt) {
-        evaluate(stmt.expression);
-        return null;
-    }
-	
-	@Override
-	public Void visitFunctionStmt(Stmt.Function stmt) {
-        LoxFunc function = new LoxFunc(stmt, environment, false);
-        environment.define(stmt.name.lexeme, function);
-        return null;
-    }
-
-	@Override
-    public Void visitIfStmt(Stmt.If stmt) {
-        if (isTruthy(evaluate(stmt.condition))) {
-            execute(stmt.thenBranch);
-        } else if (stmt.elseBranch != null) {
-            execute(stmt.elseBranch);
-        }
-        return null;
-    }
-
-	@Override
-	public Void visitPrintStmt(Print stmt) {
-		Object value = evaluate(stmt.expression);
-        System.out.println(stringify(value));
-        return null;
-	}
-
-	@Override
-	public Void visitReturnStmt(Return stmt) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Void visitVarStmt(Var stmt) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Void visitWhileStmt(While stmt) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Void visitClassStmt(Class stmt) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Object evaluateAssignment(Assign expr) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Object evaluateBinary(BinaryOp expr) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Object evaluateCall(CallExpr expr) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Object evaluateGet(GetProp expr) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Object evaluateLiteral(Value expr) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Object evaluateGrouping(Group expr) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Object evaluateLogical(LogicalOp expr) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Object evaluateUnary(UnaryOp expr) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Object evaluateVariable(VarRef expr) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Object evaluateThis(ThisRef expr) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Object evaluateSuper(SuperCall expr) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
 }
