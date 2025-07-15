@@ -7,22 +7,25 @@ public class Environment {
     private final Map<String, Object> values = new HashMap<>();
     final Environment enclosing;
 
-    // Construtor para ambiente global (sem enclosing)
+    // Construtores (mantidos iguais)
     public Environment() {
         this.enclosing = null;
     }
 
-    // Construtor para ambientes aninhados (com enclosing)
     public Environment(Environment enclosing) {
         this.enclosing = enclosing;
     }
 
-    // Define uma variável no ambiente atual
-    public void define(Token token, Object value) {
-        values.put(token, value);
+    // Método define unificado - substitui todas as versões anteriores
+    public void define(String name, Object value) {
+        values.put(name, value);
     }
 
-    // Obtém o valor de uma variável, procurando nos ambientes aninhados
+    // Métodos originais mantidos
+    public void define(Token token, Object value) {
+        values.put(token.lexeme, value);
+    }
+
     public Object get(Token name) {
         if (values.containsKey(name.lexeme)) {
             return values.get(name.lexeme);
@@ -35,7 +38,6 @@ public class Environment {
         throw new RuntimeError(name, "Undefined variable '" + name.lexeme + "'.");
     }
 
-    // Atribui valor a uma variável, procurando nos ambientes aninhados
     public void assign(Token name, Object value) {
         if (values.containsKey(name.lexeme)) {
             values.put(name.lexeme, value);
@@ -50,17 +52,14 @@ public class Environment {
         throw new RuntimeError(name, "Undefined variable '" + name.lexeme + "'.");
     }
 
-    // Obtém valor em um ambiente específico da cadeia (para resolução de variáveis)
     public Object getAt(int distance, String name) {
         return ancestor(distance).values.get(name);
     }
 
-    // Atribui valor em um ambiente específico da cadeia
     public void assignAt(int distance, Token name, Object value) {
         ancestor(distance).values.put(name.lexeme, value);
     }
 
-    // Encontra o ambiente ancestral na distância especificada
     private Environment ancestor(int distance) {
         Environment environment = this;
         for (int i = 0; i < distance; i++) {
@@ -69,18 +68,8 @@ public class Environment {
         return environment;
     }
 
-	public void define(String string, LoxInstance instance) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	public void define(String string, LoxCallable loxCallable) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	public void define(String string, Object superclass) {
-		// TODO Auto-generated method stub
-		
-	}
+    // Métodos removidos (não são mais necessários):
+    // public void define(String string, LoxInstance instance)
+    // public void define(String string, LoxCallable loxCallable) 
+    // public void define(String string, Object superclass)
 }

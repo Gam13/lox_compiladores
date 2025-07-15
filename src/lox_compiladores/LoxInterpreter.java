@@ -15,30 +15,30 @@ import lox_compiladores.Expr.ThisRef;
 import lox_compiladores.Expr.UnaryOp;
 import lox_compiladores.Expr.Value;
 import lox_compiladores.Expr.VarRef;
+import lox_compiladores.Expr.SetProp;
 
 public class LoxInterpreter implements Expr.ExpressionEvaluator<Object>, Stmt.Visitor<Void> {
+
     final Environment globals = new Environment();
     private Environment environment = globals;
     private final Map<Expr, Integer> locals = new HashMap<>();
 
+
     LoxInterpreter() {
         globals.define("clock", new LoxCallable() {
             @Override
-            public int ParamNumbs() {
-                return 0;
-            }
-
+            public int ParamNumbs() { return 0; }
+            
             @Override
             public Object call(LoxInterpreter interpreter, List<Object> arguments) {
                 return (double)System.currentTimeMillis() / 1000.0;
             }
-
+            
             @Override
-            public String toString() {
-                return "<native fn>";
-            }
+            public String toString() { return "<native fn>"; }
         });
     }
+
 
     void interpret(List<Stmt> statements) {
         try {
@@ -58,22 +58,19 @@ public class LoxInterpreter implements Expr.ExpressionEvaluator<Object>, Stmt.Vi
         stmt.accept(this);
     }
 
-    void resolve(Expr expr, int depth) {
-        locals.put(expr, depth);
-    }
 
-    void executeBlock(List<Stmt> statements, Environment environment) {
-        Environment previous = this.environment;
-        try {
-            this.environment = environment;
-            for (Stmt statement : statements) {
-                execute(statement);
-            }
-        } finally {
-            this.environment = previous;
+    @Override
+    public Object evaluateSet(SetProp expr) {
+        Object object = evaluate(expr.object);
+        if (!(object instanceof LoxInstance)) {
+            throw new RuntimeError(expr.property, "Only instances have fields.");
         }
+        Object value = evaluate(expr.value);
+        ((LoxInstance) object).set(expr.property, value);
+        return value;
     }
 
+    // Implementações dos visit... (já existiam)
     @Override
     public Void visitBlockStmt(Stmt.Block stmt) {
         executeBlock(stmt.statements, new Environment(environment));
@@ -217,8 +214,7 @@ public class LoxInterpreter implements Expr.ExpressionEvaluator<Object>, Stmt.Vi
             case STAR:
                 checkNumberOperands(expr.operator, left, right);
                 return (double)left * (double)right;
-		default:
-			break;
+            default: break;
         }
         return null;
     }
@@ -277,8 +273,7 @@ public class LoxInterpreter implements Expr.ExpressionEvaluator<Object>, Stmt.Vi
     public Object evaluateUnary(UnaryOp expr) {
         Object right = evaluate(expr.right);
         switch (expr.operator.type) {
-            case BANG:
-                return !isTruthy(right);
+            case BANG: return !isTruthy(right);
             case MINUS:
                 checkNumberOperand(expr.operator, right);
                 return -(double)right;
@@ -349,5 +344,21 @@ public class LoxInterpreter implements Expr.ExpressionEvaluator<Object>, Stmt.Vi
             return text;
         }
         return object.toString();
+    }
+
+    void resolve(Expr expr, int depth) {
+        locals.put(expr, depth);
+    }
+
+    void executeBlock(List<Stmt> statements, Environment environment) {
+        Environment previous = this.environment;
+        try {
+            this.environment = environment;
+            for (Stmt statement : statements) {
+                execute(statement);
+            }
+        } finally {
+            this.environment = previous;
+        }
     }
 }

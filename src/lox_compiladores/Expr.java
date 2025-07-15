@@ -3,13 +3,12 @@ package lox_compiladores;
 import java.util.List;
 
 public abstract class Expr {
-
-
-	public interface ExpressionEvaluator<T> {
+    public interface ExpressionEvaluator<T> {
         T evaluateAssignment(Assign expr);
         T evaluateBinary(BinaryOp expr);
         T evaluateCall(CallExpr expr);
         T evaluateGet(GetProp expr);
+        T evaluateSet(SetProp expr);  // Adicionado para suportar atribuição a propriedades
         T evaluateLiteral(Value expr);
         T evaluateGrouping(Group expr);
         T evaluateLogical(LogicalOp expr);
@@ -77,7 +76,22 @@ public abstract class Expr {
         }
     }
 
-    // 5. Literal (42, "texto", true, nil)
+    // 5. Atribuição a propriedade (objeto.propriedade = valor)
+    public static class SetProp extends Expr {
+        public final Expr object;
+        public final Token property;
+        public final Expr value;
+        public SetProp(Expr object, Token property, Expr value) {
+            this.object = object;
+            this.property = property;
+            this.value = value;
+        }
+        @Override public <T> T accept(ExpressionEvaluator<T> evaluator) {
+            return evaluator.evaluateSet(this);
+        }
+    }
+
+    // 6. Literal (42, "texto", true, nil)
     public static class Value extends Expr {
         public final Object value;
         public Value(Object value) {
@@ -88,7 +102,7 @@ public abstract class Expr {
         }
     }
 
-    // 6. Agrupamento (1 + (2 * 3))
+    // 7. Agrupamento (1 + (2 * 3))
     public static class Group extends Expr {
         public final Expr expression;
         public Group(Expr expression) {
@@ -99,7 +113,7 @@ public abstract class Expr {
         }
     }
 
-    // 7. Operadores lógicos (and/or)
+    // 8. Operadores lógicos (and/or)
     public static class LogicalOp extends Expr {
         public final Expr left;
         public final Token operator;
@@ -114,7 +128,7 @@ public abstract class Expr {
         }
     }
 
-    // 8. Operador unário (-, !)
+    // 9. Operador unário (-, !)
     public static class UnaryOp extends Expr {
         public final Token operator;
         public final Expr right;
@@ -127,7 +141,7 @@ public abstract class Expr {
         }
     }
 
-    // 9. Referência a variável (x)
+    // 10. Referência a variável (x)
     public static class VarRef extends Expr {
         public final Token name;
         public VarRef(Token name) {
@@ -138,7 +152,7 @@ public abstract class Expr {
         }
     }
 
-    // 10. Referência a 'this' (this.propriedade)
+    // 11. Referência a 'this' (this.propriedade)
     public static class ThisRef extends Expr {
         public final Token keyword;
         public ThisRef(Token keyword) {
@@ -149,7 +163,7 @@ public abstract class Expr {
         }
     }
 
-    // 11. Chamada super (super.metodo())
+    // 12. Chamada super (super.metodo())
     public static class SuperCall extends Expr {
         public final Token keyword;
         public final Token method;
@@ -162,6 +176,7 @@ public abstract class Expr {
         }
     }
 
+    // 13. Classe especial para uso em herança
     public static class Variable extends Expr {
         public final Token name;
         
@@ -171,8 +186,6 @@ public abstract class Expr {
         
         @Override
         public <T> T accept(ExpressionEvaluator<T> evaluator) {
-            // Como esta é uma classe especial para uso em herança,
-            // podemos tratá-la como uma VarRef normal
             return evaluator.evaluateVariable(new VarRef(name));
         }
     }
