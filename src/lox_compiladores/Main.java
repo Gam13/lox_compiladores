@@ -4,11 +4,18 @@ import java.util.List;
 
 public class Main {
     public static void main(String[] args) {
+        System.out.println("=== TESTES BÁSICOS DO PARSER ===");
         testParser("var x = 42;");
         testParser("print \"Hello, world!\";");
         testParser("fun soma(a, b) { return a + b; }");
         testParser("class Animal {}");
         testParser("if (x > 5) { print \"Maior\"; }");
+        
+        System.out.println("\n=== TESTES DE ANÁLISE SEMÂNTICA ===");
+        testSemanticAnalysis();
+        
+        System.out.println("\n=== TESTES DE FUNÇÕES NATIVAS ===");
+        testNativeFunctions();
     }
 
     private static void testParser(String code) {
@@ -71,6 +78,118 @@ public class Main {
             return exprToString(bin.left) + " " + bin.operator.lexeme + " " + exprToString(bin.right);
         }
         return expr.getClass().getSimpleName();
+    }
+
+    private static void testSemanticAnalysis() {
+        System.out.println("\n--- Teste 1: Resolução de Escopos ---");
+        testFullCompilation("var global = \"global\"; { var local = \"local\"; print local; print global; }");
+        
+        System.out.println("\n--- Teste 2: Shadowing de Variáveis ---");
+        testFullCompilation("var x = \"outer\"; { var x = \"inner\"; print x; } print x;");
+        
+        System.out.println("\n--- Teste 3: Função com Parâmetros ---");
+        testFullCompilation("fun greet(name) { print \"Hello, \" + name; } greet(\"World\");");
+        
+        System.out.println("\n--- Teste 4: Erro Semântico - Variável Não Declarada ---");
+        testSemanticError("print undeclared;");
+        
+        System.out.println("\n--- Teste 5: Erro Semântico - Redeclaração ---");
+        testSemanticError("{ var x = 1; var x = 2; }");
+        
+        System.out.println("\n--- Teste 6: Verificação de Tipos ---");
+        testFullCompilation("var x = 10; var y = 20; print x + y;");
+        
+        System.out.println("\n--- Teste 7: Warning de Tipos ---");
+        testFullCompilation("var x = \"hello\"; var y = 42; print x + y;");
+    }
+
+    private static void testNativeFunctions() {
+        System.out.println("\n--- Teste 1: Função clock() ---");
+        testFullCompilation("print clock();");
+        
+        System.out.println("\n--- Teste 2: Função str() ---");
+        testFullCompilation("print str(42);");
+        
+        System.out.println("\n--- Teste 3: Função type() ---");
+        testFullCompilation("print type(42); print type(\"hello\"); print type(true);");
+        
+        System.out.println("\n--- Teste 4: Função num() ---");
+        testFullCompilation("print num(\"123\");");
+        
+        System.out.println("\n--- Teste 5: Combinação de Funções Nativas ---");
+        testFullCompilation("var x = 42; print \"Valor: \" + str(x) + \", Tipo: \" + type(x);");
+    }
+
+    private static void testFullCompilation(String code) {
+        System.out.println("Código: " + code);
+        try {
+            // 1. Scanner
+            Scanner scanner = new Scanner(code);
+            List<Token> tokens = scanner.scanTokens();
+            
+            // 2. Parser
+            Parser parser = new Parser(tokens);
+            List<Stmt> statements = parser.parse();
+            
+            if (Lox.hadError) {
+                System.out.println("Erro de parsing");
+                Lox.hadError = false;
+                return;
+            }
+            
+            // 3. Resolver (Análise Semântica)
+            LoxInterpreter interpreter = new LoxInterpreter();
+            Resolver resolver = new Resolver(interpreter);
+            resolver.resolve(statements);
+            
+            if (Lox.hadError) {
+                System.out.println("Erro semântico detectado");
+                Lox.hadError = false;
+                return;
+            }
+            
+            // 4. Execução
+            System.out.print("Resultado: ");
+            interpreter.interpret(statements);
+            
+        } catch (Exception e) {
+            System.out.println("Erro: " + e.getMessage());
+        }
+    }
+
+    private static void testSemanticError(String code) {
+        System.out.println("Código: " + code);
+        try {
+            // 1. Scanner
+            Scanner scanner = new Scanner(code);
+            List<Token> tokens = scanner.scanTokens();
+            
+            // 2. Parser
+            Parser parser = new Parser(tokens);
+            List<Stmt> statements = parser.parse();
+            
+            if (Lox.hadError) {
+                System.out.println("Erro de parsing (esperado)");
+                Lox.hadError = false;
+                return;
+            }
+            
+            // 3. Resolver (deve detectar erro semântico)
+            LoxInterpreter interpreter = new LoxInterpreter();
+            Resolver resolver = new Resolver(interpreter);
+            resolver.resolve(statements);
+            
+            if (Lox.hadError) {
+                System.out.println("Erro semântico detectado corretamente");
+                Lox.hadError = false;
+                return;
+            }
+            
+            System.out.println("Erro semântico NÃO foi detectado (problema!)");
+            
+        } catch (Exception e) {
+            System.out.println("Erro capturado: " + e.getMessage());
+        }
     }
 }
 

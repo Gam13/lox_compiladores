@@ -25,6 +25,7 @@ public class LoxInterpreter implements Expr.ExpressionEvaluator<Object>, Stmt.Vi
 
 
     LoxInterpreter() {
+        // Função nativa clock
         globals.define("clock", new LoxCallable() {
             @Override
             public int ParamNumbs() { return 0; }
@@ -32,6 +33,79 @@ public class LoxInterpreter implements Expr.ExpressionEvaluator<Object>, Stmt.Vi
             @Override
             public Object call(LoxInterpreter interpreter, List<Object> arguments) {
                 return (double)System.currentTimeMillis() / 1000.0;
+            }
+            
+            @Override
+            public String toString() { return "<native fn>"; }
+        });
+        
+        // Função nativa print (alternativa)
+        globals.define("println", new LoxCallable() {
+            @Override
+            public int ParamNumbs() { return 1; }
+            
+            @Override
+            public Object call(LoxInterpreter interpreter, List<Object> arguments) {
+                System.out.println(stringify(arguments.get(0)));
+                return null;
+            }
+            
+            @Override
+            public String toString() { return "<native fn>"; }
+        });
+        
+        // Função nativa para converter para string
+        globals.define("str", new LoxCallable() {
+            @Override
+            public int ParamNumbs() { return 1; }
+            
+            @Override
+            public Object call(LoxInterpreter interpreter, List<Object> arguments) {
+                return stringify(arguments.get(0));
+            }
+            
+            @Override
+            public String toString() { return "<native fn>"; }
+        });
+        
+        // Função nativa para converter para número
+        globals.define("num", new LoxCallable() {
+            @Override
+            public int ParamNumbs() { return 1; }
+            
+            @Override
+            public Object call(LoxInterpreter interpreter, List<Object> arguments) {
+                Object arg = arguments.get(0);
+                if (arg instanceof Double) return arg;
+                if (arg instanceof String) {
+                    try {
+                        return Double.parseDouble((String) arg);
+                    } catch (NumberFormatException e) {
+                        throw new RuntimeError(null, "Cannot convert '" + arg + "' to number.");
+                    }
+                }
+                throw new RuntimeError(null, "Cannot convert to number.");
+            }
+            
+            @Override
+            public String toString() { return "<native fn>"; }
+        });
+        
+        // Função nativa para verificar tipo
+        globals.define("type", new LoxCallable() {
+            @Override
+            public int ParamNumbs() { return 1; }
+            
+            @Override
+            public Object call(LoxInterpreter interpreter, List<Object> arguments) {
+                Object arg = arguments.get(0);
+                if (arg == null) return "nil";
+                if (arg instanceof Boolean) return "boolean";
+                if (arg instanceof Double) return "number";
+                if (arg instanceof String) return "string";
+                if (arg instanceof LoxCallable) return "function";
+                if (arg instanceof LoxInstance) return "instance";
+                return "unknown";
             }
             
             @Override
@@ -277,8 +351,10 @@ public class LoxInterpreter implements Expr.ExpressionEvaluator<Object>, Stmt.Vi
             case MINUS:
                 checkNumberOperand(expr.operator, right);
                 return -(double)right;
+            default:
+                // Unreachable
+                return null;
         }
-        return null;
     }
 
     @Override

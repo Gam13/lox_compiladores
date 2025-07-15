@@ -7,7 +7,7 @@ public class Environment {
     private final Map<String, Object> values = new HashMap<>();
     final Environment enclosing;
 
-    // Construtores (mantidos iguais)
+    // Construtores - básico mesmo, um sem pai e outro com pai
     public Environment() {
         this.enclosing = null;
     }
@@ -16,12 +16,11 @@ public class Environment {
         this.enclosing = enclosing;
     }
 
-    // Método define unificado - substitui todas as versões anteriores
+    // Define uma variável no escopo atual
     public void define(String name, Object value) {
         values.put(name, value);
     }
 
-    // Métodos originais mantidos
     public void define(Token token, Object value) {
         values.put(token.lexeme, value);
     }
@@ -32,7 +31,7 @@ public class Environment {
         }
 
         if (enclosing != null) {
-            return enclosing.get(name);
+            return enclosing.get(name); // não achou? pergunta pro pai
         }
 
         throw new RuntimeError(name, "Undefined variable '" + name.lexeme + "'.");
@@ -52,6 +51,7 @@ public class Environment {
         throw new RuntimeError(name, "Undefined variable '" + name.lexeme + "'.");
     }
 
+    // Métodos otimizados - o resolver já calculou a distância
     public Object getAt(int distance, String name) {
         return ancestor(distance).values.get(name);
     }
@@ -67,9 +67,4 @@ public class Environment {
         }
         return environment;
     }
-
-    // Métodos removidos (não são mais necessários):
-    // public void define(String string, LoxInstance instance)
-    // public void define(String string, LoxCallable loxCallable) 
-    // public void define(String string, Object superclass)
 }

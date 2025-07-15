@@ -126,7 +126,7 @@ public class Parser {
             body = new Stmt.Block(Arrays.asList(
                 body,
                 new Stmt.Expression(increment)
-            );
+            ));
         }
 
         if (condition == null) condition = new Expr.Value(true);
